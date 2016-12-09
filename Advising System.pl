@@ -26,8 +26,8 @@ advising_system(Chs ,Ncourses,TLLCourses,Schedule):-
         getObl(OblCourses),
 %Cur = [curRow('CSEN 503',4,['CSEN 501']),curRow('AE 101',2,[]),curRow('DE 101',2,[]),curRow('CHEMt 102',4,[]),curRow('As 102',4,['AE 101'])],
 %History = [histrow('AE 101','F'),histrow('CHEMt 102','B'),histrow('CSEN 501','B')],
-Cur = [curRow('PHYS 101',4,[]),curRow('AE 101',2,[])],
-History = [histrow('AE 101','F'),histrow('As 102','B'),histrow('CHEMt 102','B')],
+Cur = [curRow('PHYS 101',4,[]),curRow('AE 101',2,[]) , curRow('CSEN 102',1,[])],
+History = [histrow('AE 101','B'),histrow('As 102','B'),histrow('CHEMt 102','B')],
         hc(Cur, History, Ncourses1),       % remove courses with a grade not equal F from cur
         checkPre(Ncourses1, History, Ncourses),
         
@@ -80,9 +80,8 @@ checkCorrectness(ChsSoFar , [T,Lec,Lab|Tail]  ,  [curRow(Course,Ch,Pre) | TC],  
                                     checkT( [T,Lec,Lab |Tail]  ,  [curRow(Course,Ch,Pre) | TC],  Schedule),
                                     checkLec([T,Lec,Lab |Tail]  ,  [curRow(Course,Ch,Pre) | TC],  Schedule),
                                     checkLab([T,Lec,Lab |Tail]  ,  [curRow(Course,Ch,Pre) | TC],  Schedule),
-
+                                    checkSameGroup(T,Lab, Schedule),
                                     X1 #= ChsSoFar + Ch ,
-
                                     checkCorrectness(X1 , Tail , TC , Schedule,OblCourses, Chs).
 
 % check if it is 0 in one of the elements , then check that it doesnot exist in the schedule so it is true.
@@ -97,6 +96,27 @@ checkLab([_,_,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lab #= 0, 
 checkLab([_,_,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lab #\= 0, nth1(Lab , Schedule, schRow(Course, _, _, _, 'Lab', _, _)).
 
 
+%course has a lab and a tutorial, it is preferable that the student attends both with the same group.
+%the student should attend the tutorial before the lab.
+checkSameGroup(0,_,S).
+checkSameGroup(_,0,S).
+checkSameGroup(T,Lab ,Schedule ):-
+                         nth1(T , Schedule, schRow(_, _, DayT, SlotT, _, _, GT)),
+                         nth1(Lab , Schedule, schRow(_, _, DayL, SlotL, _, _, GL)),
+                         atom_length( GT,SGT),
+                         atom_length( GL,SGL),
+                         IGT1 #= SGT - 2,
+                         IGL1 #=  SGL - 2 ,
+                         sub_atom(GT, IGT1, 2, _, A) ,
+                         sub_atom(GL, IGL1, 2, _, B) ,
+                         atom_number(A, A1),
+                         atom_number(B,B1),
+                         A1 #= B1,
+                         atom_concat(DayT, SlotT, Out),
+                         atom_number(Out , DST),
+                         atom_concat(DayL, SlotL, Out1),
+                         atom_number(Out1 , DSL),
+                         DST #< DSL.
 
 % check that the summation of all the credit hours equals the given credit hours
 %checkCreditHours(Chs , [] , [] ,  Chs , History).
@@ -129,6 +149,7 @@ checkPreHelper([H|T], History):-
 
 
 %The student cannot be assigned to attend two meetings at the same time.
+
 checkDifferentTime(A , B) :-   checkDifferentTimeHelper(A,B,X),
                                all_different(X).
 
