@@ -24,12 +24,13 @@ advising_system(Chs ,Ncourses,TLLCourses,Schedule):-
         %readFile('history.csv' , History , histrow),
         %getList(Cur),
         getObl(OblCourses),
-Cur = [curRow('CSEN 503',4,['CSEN 501']),curRow('AE 101',2,[]),curRow('DE 101',2,[]),curRow('CHEMt 102',4,[]),curRow('As 102',4,['AE 101'])],
-History = [histrow('AE 101','F'),histrow('CHEMt 102','B')],
-%Cur = [curRow('CSEN 503',4,['CSEN 501'])],
-%History = [histrow('AE 101','F'),histrow('As 102','B'),histrow('CHEMt 102','B')],
+%Cur = [curRow('CSEN 503',4,['CSEN 501']),curRow('AE 101',2,[]),curRow('DE 101',2,[]),curRow('CHEMt 102',4,[]),curRow('As 102',4,['AE 101'])],
+%History = [histrow('AE 101','F'),histrow('CHEMt 102','B'),histrow('CSEN 501','B')],
+Cur = [curRow('PHYS 101',4,[]),curRow('AE 101',2,[])],
+History = [histrow('AE 101','F'),histrow('As 102','B'),histrow('CHEMt 102','B')],
         hc(Cur, History, Ncourses1),       % remove courses with a grade not equal F from cur
         checkPre(Ncourses1, History, Ncourses),
+        
         length(Schedule , ScheduleSize),
         length(Ncourses , CoursesSize),
         NewCoursesSize #= CoursesSize * 3,
@@ -37,7 +38,7 @@ History = [histrow('AE 101','F'),histrow('CHEMt 102','B')],
         TLLCourses ins 0..ScheduleSize,  %0 means there is not lecture , tutorial , or lab for this course. else, it represent a row in the schedule.
 
         checkCorrectness(0 ,TLLCourses , Ncourses, Schedule ,OblCourses, Chs ), %After checkCorrectness ,   TLLCourses is correct, such that each 3 consecutive elements are matching correctly with the element in the Ncourses.
-
+        checkDifferentTime(TLLCourses , Schedule ),
 
         labeling([],TLLCourses).
 
@@ -86,14 +87,14 @@ checkCorrectness(ChsSoFar , [T,Lec,Lab|Tail]  ,  [curRow(Course,Ch,Pre) | TC],  
 
 % check if it is 0 in one of the elements , then check that it doesnot exist in the schedule so it is true.
 % if it is not 0 then the number (T , Lec , Lab) should represent a row in the schedule with the same course in Ncourses and the same thing( lab , tut ,lecture).
-checkT([T,Lec,Lab|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):-  T #= 0 , \+(member( schRow(Course, _, _, _, 'Tut', _, _) , Schedule )).
-checkT([T,Lec,Lab|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):-  T #\= 0, nth1(T , Schedule, schRow(Course, _, _, _, 'Tut', _, _)).
+checkT([T,_,_|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):-  T #= 0 , \+(member( schRow(Course, _, _, _, 'Tut', _, _) , Schedule )).
+checkT([T,_,_|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):-  T #\= 0, nth1(T , Schedule, schRow(Course, _, _, _, 'Tut', _, _)).
 
-checkLec([T,Lec,Lab|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lec #= 0, \+(member( schRow(Course, _, _, _, 'Lecture', _, _) , Schedule )).
-checkLec([T,Lec,Lab|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lec #\= 0, nth1(Lec , Schedule, schRow(Course, _, _, _, 'Lecture', _, _)).
+checkLec([_,Lec,_|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lec #= 0, \+(member( schRow(Course, _, _, _, 'Lecture', _, _) , Schedule )).
+checkLec([_,Lec,_|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lec #\= 0, nth1(Lec , Schedule, schRow(Course, _, _, _, 'Lecture', _, _)).
                                    
-checkLab([T,Lec,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lab #= 0, \+(member( schRow(Course, _, _, _, 'Lab', _, _) , Schedule )).
-checkLab([T,Lec,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lab #\= 0, nth1(Lab , Schedule, schRow(Course, _, _, _, 'Lab', _, _)).
+checkLab([_,_,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lab #= 0, \+(member( schRow(Course, _, _, _, 'Lab', _, _) , Schedule )).
+checkLab([_,_,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule):- Lab #\= 0, nth1(Lab , Schedule, schRow(Course, _, _, _, 'Lab', _, _)).
 
 
 
@@ -124,6 +125,21 @@ checkPreHelper([H|T], History):-
                        member(histrow(H,Grade) , History),
                        Grade \= 'F',
                        checkPreHelper(T , History).
+
+
+
+%The student cannot be assigned to attend two meetings at the same time.
+checkDifferentTime(A , B) :-   checkDifferentTimeHelper(A,B,X),
+                               all_different(X).
+
+checkDifferentTimeHelper([0|T],Schedule , X):- checkDifferentTimeHelper(T , Schedule , X).
+checkDifferentTimeHelper([] , Schedule , []).
+checkDifferentTimeHelper([H|T] , Schedule , [HC|TC]):-
+                         checkDifferentTimeHelper(T , Schedule , TC),
+                         nth1(H , Schedule, schRow(_, _, A, B, _, _, _)),
+                         atom_concat(A, B, Out),
+                         atom_number(Out , HC).
+
                        
 
 
