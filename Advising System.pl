@@ -149,19 +149,27 @@ checkPreHelper([H|T], History):-
 
 
 %The student cannot be assigned to attend two meetings at the same time.
+% Each student should have at least one day off.
 
-checkDifferentTime(A , B) :-   checkDifferentTimeHelper(A,B,X),
-                               all_different(X).
+checkDifferentTime(A , B) :-   checkDifferentTimeHelper(A,B,X,Days),
+                               all_different(X),
+                               list_to_set(Days , DaysNoDuplicates),
+                               length( DaysNoDuplicates , DaysSize),
+                               DaysSize #< 6.
 
-checkDifferentTimeHelper([0|T],Schedule , X):- checkDifferentTimeHelper(T , Schedule , X).
-checkDifferentTimeHelper([] , Schedule , []).
-checkDifferentTimeHelper([H|T] , Schedule , [HC|TC]):-
-                         checkDifferentTimeHelper(T , Schedule , TC),
+checkDifferentTimeHelper([0|T],Schedule , X , Days):- checkDifferentTimeHelper(T , Schedule , X , Days).
+checkDifferentTimeHelper([] , Schedule , [],[]).
+checkDifferentTimeHelper([H|T] , Schedule , [HC|TC] , [HD|TD]):-
+                         checkDifferentTimeHelper(T , Schedule , TC , TD),
                          nth1(H , Schedule, schRow(_, _, A, B, _, _, _)),
                          atom_concat(A, B, Out),
-                         atom_number(Out , HC).
+                         atom_number(Out , HC),
+                         atom_concat(A, '', A1),
+                         atom_number(A1 , HD).
 
-                       
+
+
+                         
 
 
 
