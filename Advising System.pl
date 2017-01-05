@@ -19,17 +19,18 @@ forTesting(X,Y):-
                X ins 0..4,
                forTestingC(X,Y).
 
+testtHelper([A,B,C] , Y ):-  A#\= 0, Y #= 0.
+testtHelper([0,B,C] , Y):-  A#= 0, Y #= 1.
 
-testtHelper([A,B,C] , Y ):- A #= 0, Y #= 0.
-testtHelper([A,B,C] , Y):-
-                      A #\= 0, Y #= 1.
+
 
 testt(X , Y):-
           X = [A,B,C],
-          X ins 0..4,
-          print(X),
-          testtHelper(X,Y),
+          X ins 0..100,
+          Temp #= A ^ B,
+          Temp #\= 0,
           labeling([],X).
+          %testtHelper(X,Y).
 
 
 %test( Tobechecked  , [] ,[],0 , L ).
@@ -84,7 +85,7 @@ testHelper([H|T],A ):-
 
 advising_system(Chs ,Ncourses,TLLCourses,Schedule, Gaps,DaysNoDuplicates, G , Elem):-
         %readFile('data_formated_22556.csv' , Schedule , schRow),
-        readFile('s2.csv' , Schedule , schRow),
+       readFile('s2.csv' , Schedule , schRow),
         %readFile('history.csv' , History , histrow),
         %getList(Cur),
         getObl(OblCourses),
@@ -92,7 +93,7 @@ advising_system(Chs ,Ncourses,TLLCourses,Schedule, Gaps,DaysNoDuplicates, G , El
 %History = [histrow('AE 101','B'),histrow('CHEMt 102','B'),histrow('CSEN 501','B')],
 %Cur = [curRow('CSEN 102',2,[]),curRow('CSEN 301',2,[]) , curRow('PHYSp 301',2,[]), curRow('CSEN 909',2,[]),curRow('CSEN 702',2,[]) ,curRow('CSEN 704',2,[])],
 %History = [],
-Cur = [curRow('CSEN 301',2,[])],
+Cur = [curRow('CSEN 301',2,[]),curRow('CSEN 102',2,[])],
 History = [],
         hc(Cur, History, Ncourses1),       % remove courses with a grade not equal F from curriculum
         checkPre(Ncourses1, History, Ncourses),
@@ -104,9 +105,11 @@ History = [],
         TLLCourses ins 0..ScheduleSize,  %0 means there is not lecture , tutorial , or lab for this course. else, it represent a row in the schedule.
         convertArrayOfAtoms(OblCourses , OblCoursesCode),
         convert(Schedule , CourseCode , DayCode ,SlotCode ,TypeCode , GroupCode),
-        checkCorrectness(0,TLLCourses , Ncourses, Schedule ,OblCoursesCode, Chs ,  CourseCode , DayCode ,SlotCode ,TypeCode , GroupCode  ), %After checkCorrectness ,   TLLCourses is correct, such that each 3 consecutive elements are matching correctly with the element in the Ncourses.
 
-        %checkDifferentTime(TLLCourses , Schedule , Gaps , Days ,  DayCode ,SlotCode),
+        checkCorrectness(0,TLLCourses , Ncourses, Schedule ,OblCoursesCode, Chs ,  CourseCode , DayCode ,SlotCode ,TypeCode , GroupCode  ), %After checkCorrectness ,   TLLCourses is correct, such that each 3 consecutive elements are matching correctly with the element in the Ncourses.
+        %checkGroup(TLLCourses , DayCode ,SlotCode ,TypeCode , GroupCode ),
+
+        checkDifferentTime(TLLCourses , Schedule , Gaps , Days ,  DayCode ,SlotCode),
 
        % sort( Days, DaysSorted),
         %sort(Gaps, GapsSorted),
@@ -118,6 +121,7 @@ History = [],
        %all_different(NewList),
         print( TLLCourses),
         labeling([],TLLCourses),
+
         print(TLLCourses).
         %list_to_set(Days , DaysNoDuplicates),
 
@@ -189,6 +193,7 @@ checkCorrectness(ChsSoFar , [T,Lec,Lab|Tail]  ,  [curRow(Course,Ch,Pre) | TC],  
                                     checkT( [T,_,_ |Tail]  ,  [curRow(Course,Ch,Pre) | TC],  Schedule , OblCourses ,DomainListT , CourseCode , TypeCode ),
                                     checkLec([T,Lec,_ |Tail]  ,  [curRow(Course,Ch,Pre) | TC],  Schedule,OblCourses,DomainListLec , DomainListT , CourseCode , TypeCode ),
                                     checkLab([_,Lec,Lab |Tail]  ,  [curRow(Course,Ch,Pre) | TC],  Schedule,OblCourses , DomainListLab , DomainListLec , CourseCode , TypeCode ),
+
                                     removeWrongCombinations(T ,  Lec,  Lab , DomainListT ),
                                     removeWrongCombinations(T ,  Lab,  Lab , DomainListT ),
                                     removeWrongCombinations(Lec ,  Lab, T , DomainListLec ),
@@ -196,9 +201,10 @@ checkCorrectness(ChsSoFar , [T,Lec,Lab|Tail]  ,  [curRow(Course,Ch,Pre) | TC],  
                                     removeWrongCombinations(Lab ,  T,Lec,DomainListLab ),
                                     removeWrongCombinations(Lab ,  Lec ,Lec,DomainListLab ),
                                     checkCHWithObl(ChsSoFar,[T,Lec,Lab|Tail] , Course ,Ch, OblCourses  ,X1 , Res),
-                                    checkSameGroup(T,Lab , DayCode ,SlotCode ,TypeCode , GroupCode , Res),
+
                                     X2 #= ChsSoFar + X1,
-                                    checkCorrectness(X2 , Tail , TC , Schedule,OblCourses, Chs ,  CourseCode , DayCode ,SlotCode ,TypeCode , GroupCode).
+                                    checkCorrectness(X2 , Tail , TC , Schedule,OblCourses, Chs ,  CourseCode , DayCode ,SlotCode ,TypeCode , GroupCode),
+                                    checkSameGroup(T,Lab , DayCode ,SlotCode ,TypeCode , GroupCode , Res).
 
 % check if it is 0 in one of the elements , then check that it doesnot exist in the schedule so it is true.
 % if it is not 0 then the number (T , Lec , Lab) should represent a row in the schedule with the same course in Ncourses and the same thing( lab , tut ,lecture).
@@ -238,8 +244,21 @@ removeWrongCombinations(First , Second ,Third, DomainListFirst):-
 removeWrongCombinations(First , Second ,Third, DomainListFirst):-
 
                                        length(DomainListFirst , Size),
-                                       Size #\= 1,
-                                       Temp #= First ^ Second,
+                                      Size #\= 1,
+                                       
+                                       %B = Second,
+
+                                       %B2 #= 2 * Second ,
+                                       %BBot #= Second +1,
+                                       %Res #= B2 // BBot,
+
+
+
+                                       Second #\=0 #<==> Res,
+
+                                       Temp #= First ^ Res,
+
+
                                        Temp #\= 0.
 
 checkT([T,_,_|Tail]   , [curRow(Course,Ch,Pre) | TC],  Schedule , OblCourses ,DomainOut  , CourseCode , TypeCode ):-   \+(myMember(T , Course , Schedule , 'Tut' , CourseC ,DomainOut , CourseCode , TypeCode)) , T #= 0 .
@@ -274,65 +293,73 @@ checkLab([_,Lec,Lab|Tail]  , [curRow(Course,Ch,Pre) | TC],  Schedule,OblCourses,
 
 %course has a lab and a tutorial, it is preferable that the student attends both with the same group.
 %the student should attend the tutorial before the lab.
-checkSameGroupHelper(T, Lab , DayCode ,SlotCode ,TypeCode , GroupCode ,Res ):-
-                         element(T1 , DayCode, TD),
-                         element(T2, SlotCode ,TS),
-                         element(T3 , GroupCode ,GT),
+checkSameGroupHelper(T, Lab , Temp ):-
+                          %T1 #= T2 , T2 #= T3 , T3 #= T,
+                         %Lab1 #= Lab2 , Lab2 #= Lab3, Lab3 #= Lab,
+
+                         /*element(T1 , DayCode, TD),
+                         element(T1, SlotCode ,TS),
+                         element(T1 , GroupCode ,GT),
                          element(Lab1 , DayCode, LD),
-                         element(Lab2 , SlotCode ,LS),
-                         element(Lab3 , GroupCode ,GL),
+                         element(Lab1 , SlotCode ,LS),
+                         element(Lab1 , GroupCode ,GL),
+                         T1 #= T #<==> Res1,
+                         Lab1 #= Lab #<==> Res2,
+                         Res1 + Res2 #= 2.*/
+                         T #\=0 #<==> Res1,
+                         Lab #\=0 #<==> Res2,
+                         Temp #= Res1 +Res2 .
+                         
+
+
+
                          %T1 #= T2 , T2 #= T3 , T3 #= T,
                          %Lab1 #= Lab2 , Lab2 #= Lab3, Lab3 #= Lab,
+                         /*
                          T1Res #= T1 * Res ,T2Res #= T2 * Res, T3Res #= T3 * Res,
-                         print("ssssssssssssssss"),
                          Lab1Res #= Lab1 * Res,Lab2Res #= Lab2 * Res,Lab3Res #= Lab3 * Res,
-                         print("JJJJJJJJJJJJ") ,
                          T1Res #= T2Res ,T2Res #= T3Res , T3Res #= T,
-                         print("RRRRRRRRRRRRRRR"),
                          Lab1Res #= Lab2Res, Lab2Res #= Lab3Res, Lab3Res #= Lab,
-                         print("hhhhhhhhhhhhhh").
+                         
+                         T11 = T1 , T22 = T2 , T33 = T3,  T44 = T ,
+                         Lab11 = Lab1 , Lab22 = Lab2, Lab33 = Lab3, Lab44 = Lab,
+                         T11 #= T22 , T22 #= T33 , T33 #= T44,
+                         Lab11 #= Lab22 , Lab22 #= Lab33, Lab33 #= Lab44.
+                         */
 
-
-checkSameGroup(T,Lab,DayCode ,SlotCode ,TypeCode , GroupCode , Res):-  \+(checkSameGroupHelper(T,Lab , DayCode ,SlotCode ,TypeCode , GroupCode , Res )).
-
+/*checkSameGroup(T,Lab,DayCode ,SlotCode ,TypeCode , GroupCode , Res):-
+                         checkSameGroupHelper(T, Lab , Temp ),
+                         Temp #\= 2.
+*/
 checkSameGroup(T,Lab  ,DayCode ,SlotCode ,TypeCode , GroupCode , Res ):-
 
                          %convert(Schedule , CourseCode , DayCode ,SlotCode ,TypeCode) ,
-                         checkSameGroupHelper(T,Lab , DayCode ,SlotCode ,TypeCode , GroupCode , Res ),
-
-                         %nth1(T , Schedule, schRow(_, _, DayT, SlotT, _, _, GT)),
-                         %nth1(Lab , Schedule, schRow(_, _, DayL, SlotL, _, _, GL)),
-
-                         %atom_length( GT,SGT),
-                         %atom_length( GL,SGL),
-                         %IGT1 #= SGT - 2,
-                         %IGL1 #=  SGL - 2 ,
-                         %sub_atom(GT, IGT1, 2, _, A) ,
-                         %sub_atom(GL, IGL1, 2, _, B) ,
-                         %atom_number(A, A1),
-                         %atom_number(B,B1),
-                         T1 #= T2 , T2 #= T3 , T3 #= T,
-
-                         Lab1 #= Lab2 , Lab2 #= Lab3, Lab3 #= Lab,
+                         %checkSameGroupHelper(T,Lab , DayCode ,SlotCode ,TypeCode , GroupCode , Res ),
+                         %checkSameGroupHelper(T, Lab , Temp )     ,
+                         %Temp #= 2,
+                         element(T1 , DayCode, TD),
+                         element(T1, SlotCode ,TS),
+                         element(T1 , GroupCode ,GT),
+                         element(Lab1 , DayCode, LD),
+                         element(Lab1 , SlotCode ,LS),
+                         element(Lab1 , GroupCode ,GL),
+                        % T #= T1 #<==> Lab #= Lab1T ,
+                          T #= T1 #\/ T #= 0 ,Lab #= Lab1 #\/ Lab #= 0 ,
 
                          A1 #= GT mod 1000,
                          B1 #= GL mod 1000,
                          A1 #= B1,
 
-                         %atom_concat(DayT, SlotT, Out),
-                         %atom_number(Out , DST),
-                         %atom_concat(DayL, SlotL, Out1),
-                         %atom_number(Out1 , DSL),
-                         print("GG"),
-                         print(TD),
-                         print("AA"),
-                         print(LD),
+
                          TDay10 #= TD * 10,
                          DST #= TDay10 + TS,
                          LDay10 #= LD * 10,
                          DSL #= LDay10 + LS,
-                         print(DST), print(DSL),
+
                          DST #=< DSL.
+
+checkGroup([] , DayCode ,SlotCode ,TypeCode , GroupCode ):- print("I AM ").
+checkGroup([T,_,Lab|Tail] , DayCode ,SlotCode ,TypeCode , GroupCode ):-   checkSameGroup(T,Lab , DayCode ,SlotCode ,TypeCode , GroupCode , 1),checkGroup(Tail , DayCode ,SlotCode ,TypeCode , GroupCode ).
 
 
 % check that the summation of all the credit hours equals the given credit hours
